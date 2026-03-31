@@ -649,10 +649,10 @@ button.blue {
 
 /* ── 문서 패키지 2열 레이아웃 ── */
 .docs-shell {
-  grid-template-columns: minmax(240px, 30%) minmax(0, 70%);
+  grid-template-columns: minmax(0, 70%) minmax(240px, 30%);
   grid-template-areas:
     "upload upload"
-    "preview package";
+    "package preview";
   align-items: start;
 }
 
@@ -771,8 +771,8 @@ button.blue {
     grid-template-columns: 1fr;
     grid-template-areas:
       "upload"
-      "preview"
-      "package";
+      "package"
+      "preview";
   }
 
   .docs-shell .upload-banner,

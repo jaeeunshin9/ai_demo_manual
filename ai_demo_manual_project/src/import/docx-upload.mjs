@@ -179,7 +179,7 @@ function buildFaqSeeds(productName) {
   return [
     {
       question: "업로드한 문서는 언제 반영되었나요?",
-      answer: "문서 업로드가 완료되면 즉시 문서 패키지가 재생성되며 운영 페이지에 업로드 시각이 기록됩니다."
+      answer: "문서 업로드가 완료되면 즉시 문서가 재생성되며 연결 페이지에 업로드 시각이 기록됩니다."
     },
     {
       question: "어떤 기준으로 섹션이 생성되나요?",
@@ -204,7 +204,7 @@ export async function parseUploadedDocx({ fileName, buffer, uploadedAt, fileSize
   const productName = inferProductName(documentTitle);
   const { summaryParagraphs, sections } = buildSections(blocks.length ? blocks.slice(blocks[0]?.text === documentTitle ? 1 : 0) : textParagraphs.map((text) => ({ tag: "p", text })));
   const summary = (summaryParagraphs.length ? summaryParagraphs : textParagraphs.slice(1, 3)).join(" ").trim()
-    || `${productName} 문서가 업로드되어 자동 패키지화되었습니다.`;
+    || `${productName} 문서가 업로드되어 자동으로 문서화되었습니다.`;
   const localizedMeta = makeLocalizedMeta(documentTitle, productName);
   const uploadVersion = new Date(uploadedAt).toISOString().slice(0, 16).replace(/[-:T]/g, ".");
   const source = {
@@ -226,12 +226,12 @@ export async function parseUploadedDocx({ fileName, buffer, uploadedAt, fileSize
       },
       {
         id: "package-generator",
-        label: "Document package generator",
+        label: "Document generator",
         kind: "automation",
         repository: "in-memory-package-builder",
         version: "1.0.0",
         status: "synced",
-        detail: "업로드 원문에서 문서 패키지를 자동 생성"
+        detail: "업로드 원문에서 문서를 자동 생성"
       }
     ],
     version: `upload-${new Date(uploadedAt).toISOString().slice(0, 10)}`,
@@ -251,15 +251,15 @@ export async function parseUploadedDocx({ fileName, buffer, uploadedAt, fileSize
   const changeEvent = {
     eventId,
     effectiveDate: new Date(uploadedAt).toISOString().slice(0, 10),
-    title: "업로드 문서 패키지 생성",
+    title: "업로드 문서 생성",
     localizations: {
       ja: {
-        title: "アップロード文書パッケージ生成",
-        summary: `${fileName} をもとに文書パッケージを自動生成しました。`
+        title: "アップロード文書生成",
+        summary: `${fileName} をもとに文書を自動生成しました。`
       },
       en: {
-        title: "Uploaded document package generated",
-        summary: `A document package was generated automatically from ${fileName}.`
+        title: "Uploaded document generated",
+        summary: `Documents were generated automatically from ${fileName}.`
       }
     },
     commit: {
@@ -273,7 +273,7 @@ export async function parseUploadedDocx({ fileName, buffer, uploadedAt, fileSize
       },
       committedAt: uploadedAt
     },
-    summary: `${fileName} 업로드를 기반으로 문서 패키지를 자동 생성했습니다.`,
+    summary: `${fileName} 업로드를 기반으로 문서를 자동 생성했습니다.`,
     updates: sections.slice(0, 2).map((section) => ({
       sectionId: section.id,
       subsectionTitle: section.subsectionTitle,
@@ -283,7 +283,7 @@ export async function parseUploadedDocx({ fileName, buffer, uploadedAt, fileSize
     faqAdditions: [
       {
         question: "업로드된 문서는 어디서 확인하나요?",
-        answer: "문서 패키지 페이지에서 미리보기와 언어별 다운로드를 바로 확인할 수 있습니다."
+        answer: "문서 페이지에서 미리보기와 언어별 다운로드를 바로 확인할 수 있습니다."
       }
     ]
   };

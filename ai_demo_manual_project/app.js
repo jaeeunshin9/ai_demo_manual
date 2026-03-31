@@ -13,12 +13,12 @@ const storageKeys = {
 const uiCopy = {
   ko: {
     brand: { appName: "AI 매뉴얼" },
-    nav: ["대시보드", "문서 패키지", "운영", "문서 검색"],
+    nav: ["대시보드", "매뉴얼", "연결", "Q&A 챗봇"],
     pages: {
-      overview: ["대시보드", "문서 허브", "동기화와 준비 상태", "운영 상태"],
-      documents: ["문서 패키지", "문서 패키지", "언어별 문서", "문서", "문서 미리보기", "미리보기"],
-      operations: ["운영", "운영", "시스템 연결 상태", "연결", "최근 반영", "변경 이력"],
-      search: ["문서 검색", "문서 검색", "문서에 물어보기", "대화", "근거 위치", "아티팩트"]
+      overview: ["대시보드", "매뉴얼 허브", "동기화와 준비 상태", "연결 상태"],
+      documents: ["매뉴얼", "매뉴얼", "언어별 매뉴얼 다운로드", "매뉴얼", "매뉴얼 미리보기", "미리보기"],
+      operations: ["연결", "연결", "시스템 연결 상태", "연결", "최근 반영", "변경 이력"],
+      search: ["Q&A 챗봇", "Q&A 챗봇", "질문하기", "대화", "근거 위치", "아티팩트"]
     },
     controls: {
       system: "시스템", locale: "언어", ask: "질문하기",
@@ -27,39 +27,39 @@ const uiCopy = {
       sync: "동기화 시각", version: "현재 버전", latest: "최근 이벤트",
       source: "원천 저장소", owner: "운영 주체", activeSystem: "선택 시스템",
       pendingSystems: "대기 시스템",
-      previewEmpty: "이 시스템의 문서 미리보기를 준비 중입니다.",
+      previewEmpty: "이 시스템의 매뉴얼 미리보기를 준비 중입니다.",
       fullManual: "전체 매뉴얼",
       summaryVersion: "요약본",
       summaryPreview: "요약 미리보기",
       citation: "출처",
-      greeting: "안녕하세요. AI 매뉴얼 서비스입니다. 운영 매뉴얼에 대해 무엇이든 물어보세요.",
+      greeting: "안녕하세요. AI 매뉴얼 서비스입니다. 매뉴얼에 대해 무엇이든 물어보세요.",
       chatError: "AI 응답 서버에 연결하지 못했습니다. 서버와 Gemini API 설정을 확인해 주세요.",
       noAnswer: "현재 질문에 대한 답변을 생성하지 못했습니다. 다른 표현으로 다시 질문해 주세요.",
       event: "이벤트",
-      uploadTitle: "신규 제품 Word 업로드",
-      uploadDescription: "신규 제품은 기존 매뉴얼이 없으므로 Word(.docx) 원문을 업로드해 문서 패키지를 생성합니다.",
-      uploadButton: "업로드 후 패키지 생성",
-      uploadEmpty: "업로드된 문서가 없습니다. Word 파일을 올리면 문서 패키지와 운영 정보가 생성됩니다.",
+      uploadTitle: "신규 프로덕트 Word 업로드",
+      uploadDescription: "신규 프로덕트는 기존 매뉴얼이 없으므로 Word(.docx) 원문을 업로드해 매뉴얼을 생성합니다.",
+      uploadButton: "업로드 후 매뉴얼 생성",
+      uploadEmpty: "업로드된 문서가 없습니다. Word 파일을 올리면 매뉴얼과 연결 정보가 생성됩니다.",
       uploadPending: "Word 파일을 업로드하는 중입니다...",
-      uploadSuccess: "문서 패키지 생성이 완료되었습니다.",
+      uploadSuccess: "매뉴얼 생성이 완료되었습니다.",
       uploadError: "Word 업로드에 실패했습니다. 파일 형식과 내용을 확인해 주세요.",
-      uploadRequired: "신규 제품은 Word 문서를 먼저 업로드해야 검색과 문서 생성이 가능합니다.",
+      uploadRequired: "신규 프로덕트는 Word 문서를 먼저 업로드해야 Q&A 챗봇과 매뉴얼 생성을 이용할 수 있습니다.",
       selectedFile: "선택 파일",
       uploadedAt: "업로드 시각",
       sectionCount: "섹션 수",
       paragraphCount: "문단 수",
-      generatedPackage: "생성된 패키지",
+      generatedPackage: "생성된 매뉴얼",
       sourceFile: "원본 파일"
     }
   },
   ja: {
     brand: { appName: "AIマニュアル" },
-    nav: ["ダッシュボード", "文書パッケージ", "運用", "文書検索"],
+    nav: ["ダッシュボード", "マニュアル", "連携", "Q&Aチャットボット"],
     pages: {
-      overview: ["ダッシュボード", "ドキュメントハブ", "同期と準備状態", "運用状態"],
-      documents: ["文書パッケージ", "文書パッケージ", "言語別文書", "文書", "文書プレビュー", "プレビュー"],
-      operations: ["運用", "運用", "システム接続状態", "接続", "最新反映", "変更履歴"],
-      search: ["文書検索", "文書検索", "文書に質問する", "対話", "根拠位置", "アーティファクト"]
+      overview: ["ダッシュボード", "マニュアルハブ", "同期と準備状態", "連携状態"],
+      documents: ["マニュアル", "マニュアル", "言語別マニュアルダウンロード", "マニュアル", "マニュアルプレビュー", "プレビュー"],
+      operations: ["連携", "連携", "システム連携状態", "連携", "最新反映", "変更履歴"],
+      search: ["Q&Aチャットボット", "Q&Aチャットボット", "質問する", "対話", "根拠位置", "アーティファクト"]
     },
     controls: {
       system: "システム", locale: "言語", ask: "質問する",
@@ -68,39 +68,39 @@ const uiCopy = {
       sync: "同期時刻", version: "現在バージョン", latest: "最新イベント",
       source: "ソース保存先", owner: "運営主体", activeSystem: "選択システム",
       pendingSystems: "待機システム",
-      previewEmpty: "このシステムの文書プレビューを準備中です。",
+      previewEmpty: "このシステムのマニュアルプレビューを準備中です。",
       fullManual: "完全版マニュアル",
       summaryVersion: "要約版",
       summaryPreview: "要約プレビュー",
       citation: "出典",
-      greeting: "こんにちは。AIマニュアルサービスです。運用マニュアルについて何でも聞いてください。",
+      greeting: "こんにちは。AIマニュアルサービスです。マニュアルについて何でも聞いてください。",
       chatError: "AI 応答サーバーに接続できませんでした。サーバーと Gemini API 設定を確認してください。",
       noAnswer: "この質問に対する回答を生成できませんでした。別の表現で再度お試しください。",
       event: "イベント",
-      uploadTitle: "新製品 Word アップロード",
-      uploadDescription: "新製品は既存マニュアルがないため、Word(.docx) 原本をアップロードして文書パッケージを生成します。",
-      uploadButton: "アップロードしてパッケージ生成",
-      uploadEmpty: "アップロード済み文書がありません。Word ファイルをアップロードすると文書パッケージと運用情報が生成されます。",
+      uploadTitle: "新規プロダクト Word アップロード",
+      uploadDescription: "新規プロダクトには既存マニュアルがないため、Word(.docx) 原本をアップロードしてマニュアルを生成します。",
+      uploadButton: "アップロードしてマニュアル生成",
+      uploadEmpty: "アップロード済み文書がありません。Word ファイルをアップロードするとマニュアルと連携情報が生成されます。",
       uploadPending: "Word ファイルをアップロードしています...",
-      uploadSuccess: "文書パッケージの生成が完了しました。",
+      uploadSuccess: "マニュアルの生成が完了しました。",
       uploadError: "Word アップロードに失敗しました。ファイル形式と内容を確認してください。",
-      uploadRequired: "新製品は先に Word 文書をアップロードしてから検索と文書生成を利用できます。",
+      uploadRequired: "新規プロダクトは先に Word 文書をアップロードしてから Q&Aチャットボットとマニュアル生成を利用できます。",
       selectedFile: "選択ファイル",
       uploadedAt: "アップロード時刻",
       sectionCount: "セクション数",
       paragraphCount: "段落数",
-      generatedPackage: "生成済みパッケージ",
+      generatedPackage: "生成済みマニュアル",
       sourceFile: "元ファイル"
     }
   },
   en: {
     brand: { appName: "AI Manual" },
-    nav: ["Dashboard", "Document Package", "Operations", "Document Search"],
+    nav: ["Dashboard", "Manuals", "Connections", "Q&A Chatbot"],
     pages: {
-      overview: ["Dashboard", "Documentation Hub", "Sync & Readiness", "Operations Status"],
-      documents: ["Documents", "Document Package", "Documents by Language", "Document", "Document Preview", "Preview"],
-      operations: ["Operations", "Operations", "System Status", "Connection", "Latest Update", "Change Log"],
-      search: ["Document Search", "Document Search", "Ask the Documents", "Chat", "Citation", "Artifact"]
+      overview: ["Dashboard", "Manual Hub", "Sync & Readiness", "Connection Status"],
+      documents: ["Manuals", "Manuals", "Manual Downloads by Language", "Manual", "Manual Preview", "Preview"],
+      operations: ["Connections", "Connections", "System Connection Status", "Connection", "Latest Update", "Change Log"],
+      search: ["Q&A Chatbot", "Q&A Chatbot", "Ask Questions", "Chat", "Citation", "Artifact"]
     },
     controls: {
       system: "System", locale: "Language", ask: "Ask",
@@ -109,28 +109,28 @@ const uiCopy = {
       sync: "Synced At", version: "Current Version", latest: "Latest Event",
       source: "Source Repo", owner: "Owner", activeSystem: "Active System",
       pendingSystems: "Pending Systems",
-      previewEmpty: "Document preview is being prepared for this system.",
+      previewEmpty: "The manual preview is being prepared for this system.",
       fullManual: "Full Manual",
       summaryVersion: "Summary Version",
       summaryPreview: "Summary Preview",
       citation: "Citation",
-      greeting: "Hello. This is AI Manual. Ask anything about the operations manual.",
+      greeting: "Hello. This is AI Manual. Ask anything about the manuals.",
       chatError: "Couldn't reach the AI response server. Check the server and Gemini API configuration.",
       noAnswer: "Couldn't generate an answer for this question. Please try rephrasing it.",
       event: "Event",
       uploadTitle: "New Product Word Upload",
-      uploadDescription: "New Product has no existing manual yet, so upload a Word (.docx) source file to generate the document package.",
-      uploadButton: "Upload and Generate Package",
-      uploadEmpty: "No uploaded document yet. Upload a Word file to generate the document package and operations details.",
+      uploadDescription: "New Product has no existing manual yet, so upload a Word (.docx) source file to generate manuals.",
+      uploadButton: "Upload and Generate Manuals",
+      uploadEmpty: "No uploaded document yet. Upload a Word file to generate manuals and connection details.",
       uploadPending: "Uploading the Word file...",
-      uploadSuccess: "The document package was generated successfully.",
+      uploadSuccess: "Manuals were generated successfully.",
       uploadError: "Word upload failed. Please check the file format and contents.",
-      uploadRequired: "Upload a Word document for New Product before using search or document generation.",
+      uploadRequired: "Upload a Word document for New Product before using the Q&A chatbot or manual generation.",
       selectedFile: "Selected File",
       uploadedAt: "Uploaded At",
       sectionCount: "Section Count",
       paragraphCount: "Paragraph Count",
-      generatedPackage: "Generated Package",
+      generatedPackage: "Generated Manuals",
       sourceFile: "Source File"
     }
   }
@@ -139,17 +139,17 @@ const uiCopy = {
 const quickQuestions = {
   ko: [
     "긴급 점검 문서 승인 규칙이 어떻게 되나요?",
-    "문서 생성 결과는 어떤 언어로 볼 수 있나요?",
+    "매뉴얼 생성 결과는 어떤 언어로 볼 수 있나요?",
     "출처는 어떻게 표시되나요?"
   ],
   ja: [
     "緊急点検文書の承認ルールはどうなっていますか。",
-    "文書生成結果はどの言語で確認できますか。",
+    "マニュアル生成結果はどの言語で確認できますか。",
     "出典はどのように表示されますか。"
   ],
   en: [
     "What are the approval rules for urgent inspection documents?",
-    "In what languages can I view document generation results?",
+    "In what languages can I view manual generation results?",
     "How are citations displayed?"
   ]
 };

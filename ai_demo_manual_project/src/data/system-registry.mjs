@@ -39,14 +39,14 @@ export const documentationSystems = [
   },
   {
     id: "new-product",
-    name: "New Product",
-    localizedNames: { ko: "신규 제품", en: "New Product", ja: "新製品" },
+    name: "신규 프로덕트",
+    localizedNames: { ko: "신규 프로덕트", en: "New Product", ja: "新規プロダクト" },
     shortName: "NP",
     lifecycle: "active",
     readinessStage: "onboarding",
     workspaceLabel: "New product documentation",
     description:
-      "신규 제품 문서 시스템입니다. 온보딩 준비 중이며 상세 문서 내용은 추후 업데이트 예정입니다.",
+      "신규 프로덕트 문서 시스템입니다. 온보딩 준비 중이며 상세 문서 내용은 추후 업데이트 예정입니다.",
     owner: "AI 매뉴얼 Service Ops",
     repository: "new-product-docs",
     source: newProductSource,

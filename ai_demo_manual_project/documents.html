@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI 매뉴얼 — 문서 패키지</title>
+    <title>AI 매뉴얼 — 매뉴얼</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-page="documents">
@@ -12,9 +12,9 @@
         <a class="brand-mark" href="/">AI 매뉴얼</a>
         <nav class="sidebar-nav">
           <a class="nav-link" href="/">대시보드</a>
-          <a class="nav-link" href="/documents">문서 패키지</a>
-          <a class="nav-link" href="/operations">운영</a>
-          <a class="nav-link" href="/search">문서 검색</a>
+          <a class="nav-link" href="/documents">매뉴얼</a>
+          <a class="nav-link" href="/operations">연결</a>
+          <a class="nav-link" href="/search">Q&A 챗봇</a>
         </nav>
         <div id="sidebarStatus" class="sidebar-status"></div>
       </aside>
@@ -22,8 +22,8 @@
       <div class="main-shell">
         <header class="topbar">
           <div class="page-title">
-            <p class="eyebrow">문서 패키지</p>
-            <h1>문서 패키지</h1>
+            <p class="eyebrow">매뉴얼</p>
+            <h1>매뉴얼</h1>
           </div>
           <div class="topbar-controls">
             <label class="select-wrap">
@@ -52,25 +52,25 @@
             </div>
           </section>
 
-          <section class="panel preview-section">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">미리보기</p>
-                <h2>문서 미리보기</h2>
-              </div>
-            </div>
-            <div id="documentPreview" class="preview-panel"></div>
-          </section>
-
           <section class="panel package-section">
             <div class="panel-head">
               <div>
-                <p class="eyebrow">문서</p>
-                <h2>언어별 문서</h2>
+                <p class="eyebrow">매뉴얼</p>
+                <h2>언어별 매뉴얼 다운로드</h2>
               </div>
               <div id="documentLanguageTabs" class="segmented"></div>
             </div>
             <div id="documentPackages" class="package-list"></div>
+          </section>
+
+          <section class="panel preview-section">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">미리보기</p>
+                <h2>매뉴얼 미리보기</h2>
+              </div>
+            </div>
+            <div id="documentPreview" class="preview-panel"></div>
           </section>
         </main>
       </div>

@@ -182,10 +182,10 @@ function getLastUserMessage(messages) {
 
 function buildFallbackGreeting(locale) {
   return {
-    ko: "안녕하세요. 운영 매뉴얼과 관련된 질문을 남겨주시면 문서 기준으로 안내해 드릴게요.",
-    ja: "こんにちは。運用マニュアルに関する質問をいただければ、文書に基づいてご案内します。",
-    en: "Hello. Ask a question about the operations manual and I will answer based on the document."
-  }[locale] ?? "안녕하세요. 운영 매뉴얼과 관련된 질문을 남겨주시면 문서 기준으로 안내해 드릴게요.";
+    ko: "안녕하세요. 매뉴얼과 관련된 질문을 남겨주시면 매뉴얼 기준으로 안내해 드릴게요.",
+    ja: "こんにちは。マニュアルに関する質問をいただければ、マニュアルに基づいてご案内します。",
+    en: "Hello. Ask a question about the manuals and I will answer based on them."
+  }[locale] ?? "안녕하세요. 매뉴얼과 관련된 질문을 남겨주시면 매뉴얼 기준으로 안내해 드릴게요.";
 }
 
 function isSmallTalk(query) {
