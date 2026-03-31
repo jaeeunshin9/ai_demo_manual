@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 매뉴얼 — 문서 패키지</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-page="documents">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand-mark" href="/">AI 매뉴얼</a>
+        <nav class="sidebar-nav">
+          <a class="nav-link" href="/">대시보드</a>
+          <a class="nav-link" href="/documents">문서 패키지</a>
+          <a class="nav-link" href="/operations">운영</a>
+          <a class="nav-link" href="/search">문서 검색</a>
+        </nav>
+        <div id="sidebarStatus" class="sidebar-status"></div>
+      </aside>
+
+      <div class="main-shell">
+        <header class="topbar">
+          <div class="page-title">
+            <p class="eyebrow">문서 패키지</p>
+            <h1>문서 패키지</h1>
+          </div>
+          <div class="topbar-controls">
+            <label class="select-wrap">
+              <span>시스템</span>
+              <select id="systemSelect"></select>
+            </label>
+            <label class="select-wrap">
+              <span>언어</span>
+              <select id="localeSelect"></select>
+            </label>
+            <div id="systemBadge" class="system-badge"></div>
+          </div>
+        </header>
+
+        <main class="content-shell docs-shell">
+          <section id="newProductUploadSection" class="panel upload-banner" data-copy-skip="true" hidden>
+            <div class="upload-banner-copy">
+              <p class="eyebrow">Upload</p>
+              <h2 id="newProductUploadTitle">Upload Word Document</h2>
+              <p id="newProductUploadDescription" class="upload-copy"></p>
+              <div id="newProductUploadStatus" class="upload-status"></div>
+            </div>
+            <div class="upload-banner-actions">
+              <input id="newProductFileInput" class="upload-input" type="file" accept=".docx" />
+              <button id="newProductUploadButton" type="button" class="blue">Upload and Generate</button>
+            </div>
+          </section>
+
+          <section class="panel preview-section">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">미리보기</p>
+                <h2>문서 미리보기</h2>
+              </div>
+            </div>
+            <div id="documentPreview" class="preview-panel"></div>
+          </section>
+
+          <section class="panel package-section">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">문서</p>
+                <h2>언어별 문서</h2>
+              </div>
+              <div id="documentLanguageTabs" class="segmented"></div>
+            </div>
+            <div id="documentPackages" class="package-list"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

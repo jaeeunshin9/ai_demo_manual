@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 매뉴얼 — 문서 검색</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-page="search">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand-mark" href="/">AI 매뉴얼</a>
+        <nav class="sidebar-nav">
+          <a class="nav-link" href="/">대시보드</a>
+          <a class="nav-link" href="/documents">문서 패키지</a>
+          <a class="nav-link" href="/operations">운영</a>
+          <a class="nav-link" href="/search">문서 검색</a>
+        </nav>
+        <div id="sidebarStatus" class="sidebar-status"></div>
+      </aside>
+
+      <div class="main-shell">
+        <header class="topbar">
+          <div class="page-title">
+            <p class="eyebrow">문서 검색</p>
+            <h1>문서 검색</h1>
+          </div>
+          <div class="topbar-controls">
+            <label class="select-wrap">
+              <span>시스템</span>
+              <select id="systemSelect"></select>
+            </label>
+            <label class="select-wrap">
+              <span>언어</span>
+              <select id="localeSelect"></select>
+            </label>
+            <div id="systemBadge" class="system-badge"></div>
+          </div>
+        </header>
+
+        <main class="content-shell">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">대화</p>
+                <h2>문서에 물어보기</h2>
+              </div>
+            </div>
+            <div id="chatLog" class="chat-log"></div>
+            <form id="chatForm" class="chat-form">
+              <input id="chatInput" type="text" placeholder="질문을 입력하세요" autocomplete="off" />
+              <button type="submit" class="chat-submit">질문하기</button>
+            </form>
+            <div class="quick-questions">
+              <button type="button" class="quick-question">긴급 점검 문서 승인 규칙이 어떻게 되나요?</button>
+              <button type="button" class="quick-question">문서 생성 결과는 어떤 언어로 볼 수 있나요?</button>
+              <button type="button" class="quick-question">출처는 어떻게 표시되나요?</button>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

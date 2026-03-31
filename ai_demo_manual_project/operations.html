@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 매뉴얼 — 운영</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-page="operations">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand-mark" href="/">AI 매뉴얼</a>
+        <nav class="sidebar-nav">
+          <a class="nav-link" href="/">대시보드</a>
+          <a class="nav-link" href="/documents">문서 패키지</a>
+          <a class="nav-link" href="/operations">운영</a>
+          <a class="nav-link" href="/search">문서 검색</a>
+        </nav>
+        <div id="sidebarStatus" class="sidebar-status"></div>
+      </aside>
+
+      <div class="main-shell">
+        <header class="topbar">
+          <div class="page-title">
+            <p class="eyebrow">운영</p>
+            <h1>운영</h1>
+          </div>
+          <div class="topbar-controls">
+            <label class="select-wrap">
+              <span>시스템</span>
+              <select id="systemSelect"></select>
+            </label>
+            <label class="select-wrap">
+              <span>언어</span>
+              <select id="localeSelect"></select>
+            </label>
+            <div id="systemBadge" class="system-badge"></div>
+          </div>
+        </header>
+
+        <main class="content-shell">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">연결</p>
+                <h2>시스템 연결 상태</h2>
+              </div>
+            </div>
+            <div id="operationsSummary" class="stats-grid"></div>
+            <div id="pipelineGrid" class="checks-grid"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">변경 이력</p>
+                <h2>최근 반영</h2>
+              </div>
+            </div>
+            <div id="latestChange" class="operation-stack"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
