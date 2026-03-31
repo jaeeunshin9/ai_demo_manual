@@ -33,7 +33,7 @@ const uiCopy = {
       summaryPreview: "요약 미리보기",
       citation: "출처",
       greeting: "안녕하세요. AI 매뉴얼 서비스입니다. 운영 매뉴얼에 대해 무엇이든 물어보세요.",
-      chatError: "AI 응답 서버에 연결하지 못했습니다. 서버와 OpenAI API 설정을 확인해 주세요.",
+      chatError: "AI 응답 서버에 연결하지 못했습니다. 서버와 Gemini API 설정을 확인해 주세요.",
       noAnswer: "현재 질문에 대한 답변을 생성하지 못했습니다. 다른 표현으로 다시 질문해 주세요.",
       event: "이벤트",
       uploadTitle: "신규 제품 Word 업로드",
@@ -74,7 +74,7 @@ const uiCopy = {
       summaryPreview: "要約プレビュー",
       citation: "出典",
       greeting: "こんにちは。AIマニュアルサービスです。運用マニュアルについて何でも聞いてください。",
-      chatError: "AI 応答サーバーに接続できませんでした。サーバーと OpenAI API 設定を確認してください。",
+      chatError: "AI 応答サーバーに接続できませんでした。サーバーと Gemini API 設定を確認してください。",
       noAnswer: "この質問に対する回答を生成できませんでした。別の表現で再度お試しください。",
       event: "イベント",
       uploadTitle: "新製品 Word アップロード",
@@ -115,7 +115,7 @@ const uiCopy = {
       summaryPreview: "Summary Preview",
       citation: "Citation",
       greeting: "Hello. This is AI Manual. Ask anything about the operations manual.",
-      chatError: "Couldn't reach the AI response server. Check the server and OpenAI API configuration.",
+      chatError: "Couldn't reach the AI response server. Check the server and Gemini API configuration.",
       noAnswer: "Couldn't generate an answer for this question. Please try rephrasing it.",
       event: "Event",
       uploadTitle: "New Product Word Upload",
@@ -772,7 +772,7 @@ function appendChatCard(role, text) {
   return card;
 }
 
-// ── OpenAI 스트리밍 채팅 ──────────────────────────────
+// ── Gemini 스트리밍 채팅 ──────────────────────────────
 async function askQuestion(query) {
   const text = query.trim();
   if (!text) return;
@@ -843,8 +843,7 @@ async function askQuestion(query) {
             streamError = parsed.error;
             continue;
           }
-          // OpenAI 스트리밍 형식: choices[0].delta.content
-          const chunk = parsed.choices?.[0]?.delta?.content ?? "";
+          const chunk = parsed.text ?? parsed.choices?.[0]?.delta?.content ?? "";
           if (chunk) {
             fullText += chunk;
             bodyEl.textContent = fullText;

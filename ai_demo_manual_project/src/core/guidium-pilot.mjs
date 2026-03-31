@@ -245,24 +245,16 @@ function buildConfidenceReason(entry, matchedTerms) {
 function getAnswerCopy(locale) {
   return {
     ko: {
-      noMatch: `질문 "${"{query}"}"에 대한 직접 일치 항목을 찾지 못했습니다. 다른 키워드로 다시 검색해 주세요.`,
-      faqPrefix: "에 대한 초안 답변입니다.",
-      manualPrefix: "기준으로 답변합니다."
+      noMatch: `질문 "${"{query}"}"에 대한 직접 일치 항목을 찾지 못했습니다. 다른 키워드로 다시 검색해 주세요.`
     },
     ja: {
-      noMatch: `質問「${"{query}"}」に直接一致する項目が見つかりませんでした。別のキーワードで再度検索してください。`,
-      faqPrefix: "に対するFAQ草案の回答です。",
-      manualPrefix: "をもとに回答します。"
+      noMatch: `質問「${"{query}"}」に直接一致する項目が見つかりませんでした。別のキーワードで再度検索してください。`
     },
     en: {
-      noMatch: `No direct match was found for "${"{query}"}". Please try again with different keywords.`,
-      faqPrefix: "FAQ draft answer:",
-      manualPrefix: "Answer based on"
+      noMatch: `No direct match was found for "${"{query}"}". Please try again with different keywords.`
     }
   }[locale] ?? {
-    noMatch: `질문 "${"{query}"}"에 대한 직접 일치 항목을 찾지 못했습니다. 다른 키워드로 다시 검색해 주세요.`,
-    faqPrefix: "에 대한 초안 답변입니다.",
-    manualPrefix: "기준으로 답변합니다."
+    noMatch: `질문 "${"{query}"}"에 대한 직접 일치 항목을 찾지 못했습니다. 다른 키워드로 다시 검색해 주세요.`
   };
 }
 
@@ -278,15 +270,12 @@ function buildAnswer(topMatch, query, locale = "ko") {
 
   if (topMatch.type === "faq") {
     if (locale === "en") {
-      return `${copy.faqPrefix}\nQ: ${topMatch.subsection}\nA: ${topMatch.content}`;
+      return topMatch.content;
     }
-    return `${topMatch.subsection}${copy.faqPrefix}\n${topMatch.content}`;
+    return topMatch.content;
   }
 
-  if (locale === "en") {
-    return `${copy.manualPrefix} ${topMatch.section} / ${topMatch.subsection}. ${topMatch.content}`;
-  }
-  return `${topMatch.section} / ${topMatch.subsection} ${copy.manualPrefix} ${topMatch.content}`;
+  return topMatch.content;
 }
 
 export function answerQuestion(generated, query, options = {}) {

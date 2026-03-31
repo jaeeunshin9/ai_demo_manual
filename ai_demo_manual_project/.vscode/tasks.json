@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run AI manual server",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--env-file=.env",
+				"server.mjs"
+			],
+			"isBackground": true,
+			"group": "build"
+		}
+	]
+}

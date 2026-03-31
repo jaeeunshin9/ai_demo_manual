@@ -2,10 +2,9 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import url from "node:url";
-import OpenAI from "openai";
 import { manualSource } from "./src/data/manual-source.mjs";
 import { changeEvent } from "./src/data/change-event.mjs";
-import { createDocumentationHubState, formatLocalizedSamplesMarkdown, formatManualMarkdown } from "./src/core/guidium-pilot.mjs";
+import { answerQuestion, createDocumentationHubState, formatLocalizedSamplesMarkdown, formatManualMarkdown } from "./src/core/guidium-pilot.mjs";
 import { buildGeneratedSystemSnapshot, setGeneratedSystemState } from "./src/data/generated-manual-store.mjs";
 import { parseUploadedDocx } from "./src/import/docx-upload.mjs";
 import { getDocumentationSystem } from "./src/data/system-registry.mjs";
@@ -14,7 +13,8 @@ import { buildManualDocx } from "./src/export/docx.mjs";
 const root = process.cwd();
 const port = process.env.PORT || 4173;
 const host = process.env.HOST || "127.0.0.1";
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -113,6 +113,109 @@ function readBody(req) {
   });
 }
 
+function normalizeChatMessages(messages) {
+  if (!Array.isArray(messages)) {
+    return [];
+  }
+
+  return messages
+    .filter((message) => (
+      (message?.role === "user" || message?.role === "assistant")
+      && typeof message?.content === "string"
+      && message.content.trim()
+    ))
+    .map((message) => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: message.content }]
+    }));
+}
+
+function extractGeminiText(payload) {
+  const candidates = Array.isArray(payload) ? payload.flatMap((item) => item?.candidates ?? []) : payload?.candidates ?? [];
+  const parts = candidates[0]?.content?.parts ?? [];
+  return parts
+    .map((part) => part?.text ?? "")
+    .filter(Boolean)
+    .join("");
+}
+
+function getGeminiErrorMessage(payload, fallbackMessage) {
+  if (payload?.error?.message) {
+    return payload.error.message;
+  }
+
+  return fallbackMessage;
+}
+
+function streamTextResponse(res, text) {
+  const chunkSize = 120;
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive"
+  });
+
+  for (let index = 0; index < text.length; index += chunkSize) {
+    const chunk = text.slice(index, index + chunkSize);
+    res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+  }
+
+  res.write("data: [DONE]\n\n");
+  res.end();
+}
+
+function getLastUserMessage(messages) {
+  if (!Array.isArray(messages)) {
+    return "";
+  }
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role === "user" && typeof message?.content === "string" && message.content.trim()) {
+      return message.content.trim();
+    }
+  }
+
+  return "";
+}
+
+function buildFallbackGreeting(locale) {
+  return {
+    ko: "안녕하세요. 운영 매뉴얼과 관련된 질문을 남겨주시면 문서 기준으로 안내해 드릴게요.",
+    ja: "こんにちは。運用マニュアルに関する質問をいただければ、文書に基づいてご案内します。",
+    en: "Hello. Ask a question about the operations manual and I will answer based on the document."
+  }[locale] ?? "안녕하세요. 운영 매뉴얼과 관련된 질문을 남겨주시면 문서 기준으로 안내해 드릴게요.";
+}
+
+function isSmallTalk(query) {
+  const normalized = String(query || "").trim().toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+
+  return [
+    "안녕",
+    "안녕하세요",
+    "hello",
+    "hi",
+    "hey",
+    "こんにちは",
+    "おはよう",
+    "반가워"
+  ].some((keyword) => normalized.includes(keyword));
+}
+
+function buildManualFallbackResponse(hubState, messages, locale) {
+  const query = getLastUserMessage(messages);
+  if (!query || isSmallTalk(query)) {
+    return buildFallbackGreeting(locale);
+  }
+
+  const fallback = answerQuestion(hubState, query, { locale });
+  return fallback.answer;
+}
+
 const server = http.createServer(async (req, res) => {
   try {
   const parsed = url.parse(req.url ?? "/");
@@ -152,11 +255,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── OpenAI 대화 API ──────────────────────────────────
+  // ── Gemini 대화 API ──────────────────────────────────
   if (pathname === "/api/chat" && req.method === "POST") {
-    if (!OPENAI_API_KEY) {
+    if (!GEMINI_API_KEY) {
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "OPENAI_API_KEY not set. Please create a .env file with OPENAI_API_KEY=your_key_here" }));
+      res.end(JSON.stringify({ error: "GEMINI_API_KEY not set. Please create or update .env with GEMINI_API_KEY=your_key_here" }));
       return;
     }
 
@@ -185,31 +288,54 @@ const server = http.createServer(async (req, res) => {
 ---
 ${manualText}`;
 
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive"
-    });
-
     try {
-      const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-      const stream = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        stream: true,
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages
-        ]
-      });
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: systemPrompt }]
+            },
+            contents: normalizeChatMessages(messages),
+            generationConfig: {
+              temperature: 0.2
+            }
+          })
+        }
+      );
 
-      for await (const chunk of stream) {
-        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      let payload = null;
+      try {
+        payload = await geminiResponse.json();
+      } catch {
+        payload = null;
       }
 
-      res.write("data: [DONE]\n\n");
-      res.end();
+      if (!geminiResponse.ok) {
+        const fallbackText = buildManualFallbackResponse(hubState, messages, responseLocale);
+        streamTextResponse(res, fallbackText);
+        return;
+      }
+
+      const responseText = extractGeminiText(payload).trim();
+      if (!responseText) {
+        const fallbackText = buildManualFallbackResponse(hubState, messages, responseLocale);
+        streamTextResponse(res, fallbackText);
+        return;
+      }
+
+      streamTextResponse(res, responseText);
     } catch (err) {
+      if (!res.headersSent) {
+        const fallbackText = buildManualFallbackResponse(hubState, messages, responseLocale);
+        streamTextResponse(res, fallbackText);
+        return;
+      }
+
       res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
       res.end();
     }
