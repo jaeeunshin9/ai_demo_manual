@@ -9,6 +9,8 @@ import { buildGeneratedSystemSnapshot, setGeneratedSystemState } from "./src/dat
 import { parseUploadedDocx } from "./src/import/docx-upload.mjs";
 import { getDocumentationSystem } from "./src/data/system-registry.mjs";
 import { buildManualDocx } from "./src/export/docx.mjs";
+import { newProductSource } from "./src/data/new-product-source.mjs";
+import { newProductChangeEvent } from "./src/data/new-product-change-event.mjs";
 
 const root = process.cwd();
 const port = process.env.PORT || 4173;
@@ -252,6 +254,217 @@ const server = http.createServer(async (req, res) => {
 
     setGeneratedSystemState("new-product", generated);
     writeJson(res, 200, buildGeneratedSystemSnapshot("new-product"));
+    return;
+  }
+
+  if (pathname === "/api/new-product/upload-images" && req.method === "POST") {
+    const body = await readBody(req);
+    const { images } = JSON.parse(body);
+
+    if (!Array.isArray(images) || images.length === 0) {
+      writeJson(res, 400, { error: "이미지 데이터가 없습니다." });
+      return;
+    }
+
+    if (images.length > 10) {
+      writeJson(res, 400, { error: "최대 10장까지 업로드할 수 있습니다." });
+      return;
+    }
+
+    if (!GEMINI_API_KEY) {
+      writeJson(res, 500, { error: "GEMINI_API_KEY가 설정되지 않았습니다." });
+      return;
+    }
+
+    const imageParts = images.map((img) => ({
+      inlineData: { mimeType: img.mimeType, data: img.data }
+    }));
+
+    const visionPrompt = `당신은 전문 기술 문서 작성자입니다.
+아래 스크린샷들을 분석하여 시스템의 사용자 매뉴얼을 작성해주세요.
+
+반드시 아래 JSON 형식만 반환하세요. 다른 텍스트는 절대 포함하지 마세요:
+{
+  "productName": "시스템 이름 (한국어)",
+  "documentTitle": "사용자 매뉴얼 제목 (한국어)",
+  "summary": "시스템 요약 설명 2-3문장 (한국어)",
+  "sections": [
+    {
+      "id": "overview",
+      "titleKo": "1. 서비스 개요",
+      "subtitleKo": "1.1 제품 목적",
+      "contentKo": "한국어 내용",
+      "titleJa": "1. サービス概要",
+      "subtitleJa": "1.1 製品目的",
+      "contentJa": "일본어 내용",
+      "titleEn": "1. Service Overview",
+      "subtitleEn": "1.1 Product Purpose",
+      "contentEn": "영어 내용"
+    },
+    {
+      "id": "setup",
+      "titleKo": "2. 시작하기",
+      "subtitleKo": "2.1 초기 설정",
+      "contentKo": "한국어 내용",
+      "titleJa": "2. はじめに",
+      "subtitleJa": "2.1 初期設定",
+      "contentJa": "일본어 내용",
+      "titleEn": "2. Getting Started",
+      "subtitleEn": "2.1 Initial Setup",
+      "contentEn": "영어 내용"
+    },
+    {
+      "id": "features",
+      "titleKo": "3. 주요 기능",
+      "subtitleKo": "3.1 기능 설명",
+      "contentKo": "한국어 내용",
+      "titleJa": "3. 主要機能",
+      "subtitleJa": "3.1 機能説明",
+      "contentJa": "일본어 내용",
+      "titleEn": "3. Key Features",
+      "subtitleEn": "3.1 Feature Description",
+      "contentEn": "영어 내용"
+    },
+    {
+      "id": "operations",
+      "titleKo": "4. 운영 규칙",
+      "subtitleKo": "4.1 운영 정책",
+      "contentKo": "한국어 내용",
+      "titleJa": "4. 運用ルール",
+      "subtitleJa": "4.1 運用ポリシー",
+      "contentJa": "일본어 내용",
+      "titleEn": "4. Operations Rules",
+      "subtitleEn": "4.1 Operations Policy",
+      "contentEn": "영어 내용"
+    },
+    {
+      "id": "faq",
+      "titleKo": "5. 자주 묻는 질문",
+      "subtitleKo": "5.1 FAQ",
+      "contentKo": "한국어 내용",
+      "titleJa": "5. よくある質問",
+      "subtitleJa": "5.1 FAQ",
+      "contentJa": "일본어 내용",
+      "titleEn": "5. Frequently Asked Questions",
+      "subtitleEn": "5.1 FAQ",
+      "contentEn": "영어 내용"
+    }
+  ],
+  "faq": [
+    { "question": "한국어 질문", "answer": "한국어 답변" },
+    { "question": "한국어 질문", "answer": "한국어 답변" },
+    { "question": "한국어 질문", "answer": "한국어 답변" }
+  ]
+}`;
+
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: visionPrompt }, ...imageParts] }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 8192,
+              responseMimeType: "application/json"
+            }
+          })
+        }
+      );
+
+      if (!geminiRes.ok) {
+        const errText = await geminiRes.text();
+        console.error("Gemini Vision 오류:", errText);
+        writeJson(res, 502, { error: "Gemini Vision API 호출에 실패했습니다." });
+        return;
+      }
+
+      const geminiData = await geminiRes.json();
+      const rawText = extractGeminiText(geminiData).trim();
+      console.log("[Vision] Gemini 응답 앞부분:", rawText.slice(0, 300));
+
+      // JSON 추출 — responseMimeType 설정으로 순수 JSON이 오지만 혹시 코드블록이면 제거
+      const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+      let generated;
+      try {
+        generated = JSON.parse(cleaned);
+      } catch (parseErr) {
+        const fallbackMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (!fallbackMatch) {
+          console.error("[Vision] JSON 파싱 실패. 원문:", rawText.slice(0, 500));
+          writeJson(res, 500, { error: "매뉴얼 생성 결과를 파싱할 수 없습니다." });
+          return;
+        }
+        generated = JSON.parse(fallbackMatch[0]);
+      }
+      const uploadedAt = new Date().toISOString();
+
+      const sections = (generated.sections || []).map((s) => ({
+        id: s.id || "section",
+        sectionTitle: s.titleKo || s.id,
+        subsectionTitle: s.subtitleKo || "",
+        intent: s.titleKo || "",
+        content: s.contentKo || "",
+        keywords: [],
+        translations: {
+          ja: { sectionTitle: s.titleJa || s.titleKo, subsectionTitle: s.subtitleJa || "" },
+          en: { sectionTitle: s.titleEn || s.titleKo, subsectionTitle: s.subtitleEn || "" }
+        },
+        sampleOutputs: {
+          ja: s.contentJa || s.contentKo || "",
+          en: s.contentEn || s.contentKo || ""
+        }
+      }));
+
+      const faqSeeds = (generated.faq || []).map((f) => ({
+        question: f.question || "",
+        answer: f.answer || ""
+      }));
+
+      const productName = generated.productName || "신규 프로덕트";
+      const documentTitle = generated.documentTitle || "신규 프로덕트 사용자 매뉴얼";
+
+      const source = {
+        ...newProductSource,
+        productName,
+        documentName: documentTitle,
+        version: `screenshot-${uploadedAt.slice(0, 10)}`,
+        releaseDate: uploadedAt.slice(0, 10),
+        productSummary: generated.summary || "",
+        sections,
+        faqSeeds,
+        localizedMeta: {
+          ...newProductSource.localizedMeta,
+          ko: { ...newProductSource.localizedMeta.ko, productName, documentName: documentTitle }
+        }
+      };
+
+      const uploadMeta = {
+        fileName: `스크린샷 ${images.length}장`,
+        fileSize: images.reduce((sum, img) => sum + img.data.length, 0),
+        uploadedAt,
+        documentTitle,
+        productName,
+        paragraphCount: sections.length,
+        sectionCount: sections.length,
+        summaryLength: (generated.summary || "").length
+      };
+
+      const imageChangeEvent = {
+        ...newProductChangeEvent,
+        eventId: `CE-SCREENSHOT-${Date.now()}`,
+        title: "스크린샷 기반 매뉴얼 생성",
+        summary: `${images.length}장의 스크린샷을 분석하여 매뉴얼을 자동 생성했습니다.`
+      };
+
+      setGeneratedSystemState("new-product", { source, changeEvent: imageChangeEvent, uploadMeta });
+      writeJson(res, 200, buildGeneratedSystemSnapshot("new-product"));
+    } catch (err) {
+      console.error("이미지 업로드 처리 오류:", err);
+      writeJson(res, 500, { error: err.message || "이미지 분석 중 오류가 발생했습니다." });
+    }
     return;
   }
 

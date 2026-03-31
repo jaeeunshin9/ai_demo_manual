@@ -161,6 +161,8 @@ const state = {
   chatHistory: [],
   currentViewModel: null,
   selectedUploadFile: null,
+  selectedImageFiles: [],
+  uploadMode: "word",
   uploadStatus: { type: "idle", message: "" }
 };
 
@@ -183,6 +185,8 @@ const elements = {
   documentLanguageTabs: document.querySelector("#documentLanguageTabs"),
   documentPackages: document.querySelector("#documentPackages"),
   documentPreview: document.querySelector("#documentPreview"),
+  packageSection: document.querySelector(".package-section"),
+  previewSection: document.querySelector(".preview-section"),
   operationsSummary: document.querySelector("#operationsSummary"),
   pipelineGrid: document.querySelector("#pipelineGrid"),
   latestChange: document.querySelector("#latestChange"),
@@ -481,29 +485,90 @@ function renderNewProductUpload(viewModel) {
 
   const showUploadBar = page === "documents" && isNewProductSystem(viewModel.system.id);
   elements.newProductUploadSection.hidden = !showUploadBar;
-
-  if (!showUploadBar) {
-    return;
-  }
+  if (!showUploadBar) return;
 
   const copy = getLocaleCopy();
-  if (elements.newProductUploadTitle) {
-    elements.newProductUploadTitle.textContent = copy.controls.uploadTitle;
-  }
-  if (elements.newProductUploadDescription) {
-    elements.newProductUploadDescription.textContent = copy.controls.uploadDescription;
-  }
-  if (elements.newProductUploadButton) {
-    elements.newProductUploadButton.textContent = copy.controls.uploadButton;
-    elements.newProductUploadButton.disabled = !state.selectedUploadFile || state.uploadStatus.type === "pending";
-  }
-  if (elements.newProductUploadStatus) {
-    const statusClass = state.uploadStatus.type && state.uploadStatus.type !== "idle"
-      ? `upload-status ${state.uploadStatus.type}`
-      : "upload-status";
-    elements.newProductUploadStatus.className = statusClass;
-    elements.newProductUploadStatus.textContent = getUploadStatusMessage(viewModel, copy);
-  }
+  const isLoading = state.uploadStatus.type === "pending";
+  const isWord = state.uploadMode === "word";
+
+  const t = {
+    ko: {
+      wordTab: "📄 Word 업로드",
+      imageTab: "🖼️ 스크린샷 업로드",
+      wordDesc: "Word 파일을 업로드하면 AI가 자동으로 매뉴얼을 생성합니다.",
+      imageDesc: "스크린샷을 업로드하면 AI가 화면을 분석하여 매뉴얼을 자동 생성합니다. (최대 10장)",
+      wordUploadBtn: copy.controls.uploadButton || "업로드 및 생성",
+      imageUploadBtn: "스크린샷으로 매뉴얼 생성",
+      analyzingWord: "AI가 문서를 분석하고 있습니다...",
+      analyzingImage: "AI가 스크린샷을 분석하고 있습니다...",
+      analyzingSub: "잠시만 기다려 주세요. 매뉴얼을 생성 중입니다.",
+      selected: (n) => `🖼️ ${n}장 선택됨`,
+      wordStatus: state.uploadStatus.message || (state.selectedUploadFile ? `선택된 파일: ${state.selectedUploadFile.name}` : "파일을 선택해 주세요.")
+    },
+    ja: {
+      wordTab: "📄 Wordアップロード",
+      imageTab: "🖼️ スクリーンショット",
+      wordDesc: "Wordファイルをアップロードすると、AIが自動でマニュアルを生成します。",
+      imageDesc: "スクリーンショットをアップロードすると、AIが画面を分析してマニュアルを生成します。（最大10枚）",
+      wordUploadBtn: copy.controls.uploadButton || "アップロードして生成",
+      imageUploadBtn: "スクリーンショットでマニュアル生成",
+      analyzingWord: "AIがドキュメントを分析しています...",
+      analyzingImage: "AIがスクリーンショットを分析しています...",
+      analyzingSub: "しばらくお待ちください。マニュアルを生成中です。",
+      selected: (n) => `🖼️ ${n}枚選択済み`,
+      wordStatus: state.uploadStatus.message || (state.selectedUploadFile ? `選択ファイル: ${state.selectedUploadFile.name}` : "ファイルを選択してください。")
+    },
+    en: {
+      wordTab: "📄 Upload Word",
+      imageTab: "🖼️ Screenshots",
+      wordDesc: "Upload a Word file and AI will automatically generate a manual.",
+      imageDesc: "Upload screenshots and AI will analyze the screens to generate a manual. (Max 10)",
+      wordUploadBtn: copy.controls.uploadButton || "Upload & Generate",
+      imageUploadBtn: "Generate Manual from Screenshots",
+      analyzingWord: "AI is analyzing the document...",
+      analyzingImage: "AI is analyzing the screenshots...",
+      analyzingSub: "Please wait while the manual is being generated.",
+      selected: (n) => `🖼️ ${n} image(s) selected`,
+      wordStatus: state.uploadStatus.message || (state.selectedUploadFile ? `Selected: ${state.selectedUploadFile.name}` : "Please select a file.")
+    }
+  }[state.locale] || {};
+
+  const wordStatusClass = state.uploadStatus.type && state.uploadStatus.type !== "idle"
+    ? `upload-status ${state.uploadStatus.type}`
+    : "upload-status";
+
+  const thumbnailsHtml = state.selectedImageFiles.length > 0
+    ? `<div class="image-thumbnail-grid">${state.selectedImageFiles.map((f) => `<img src="${URL.createObjectURL(f)}" alt="${f.name}" />`).join("")}</div>
+       <div class="image-count-badge">${t.selected(state.selectedImageFiles.length)}</div>`
+    : "";
+
+  elements.newProductUploadSection.innerHTML = `
+    <div class="upload-tab-buttons">
+      <button type="button" class="upload-tab-btn${isWord ? " active" : ""}" data-upload-tab="word">${t.wordTab}</button>
+      <button type="button" class="upload-tab-btn${!isWord ? " active" : ""}" data-upload-tab="image">${t.imageTab}</button>
+    </div>
+    <p class="upload-copy">${isWord ? t.wordDesc : t.imageDesc}</p>
+    ${isWord ? `
+      <div class="upload-banner-actions">
+        <input id="newProductFileInput" class="upload-input" type="file" accept=".docx" ${isLoading ? "disabled" : ""} />
+        <button id="newProductUploadButton" type="button" class="blue" ${(!state.selectedUploadFile || isLoading) ? "disabled" : ""}>${t.wordUploadBtn}</button>
+      </div>
+      <div class="${wordStatusClass}">${t.wordStatus}</div>
+    ` : `
+      <div class="upload-banner-actions">
+        <input id="imageFileInput" class="upload-input" type="file" accept="image/*" multiple ${isLoading ? "disabled" : ""} />
+        <button id="imageUploadButton" type="button" class="blue" ${(state.selectedImageFiles.length === 0 || isLoading) ? "disabled" : ""}>${t.imageUploadBtn}</button>
+      </div>
+      ${thumbnailsHtml}
+    `}
+    ${isLoading ? `
+      <div class="upload-loading-overlay">
+        <div class="upload-spinner"></div>
+        <div class="upload-loading-text">${isWord ? t.analyzingWord : t.analyzingImage}</div>
+        <div class="upload-loading-sub">${t.analyzingSub}</div>
+      </div>
+    ` : ""}
+  `;
 }
 
 function buildNewProductUploadMarkup(viewModel, variant = "preview") {
@@ -592,12 +657,12 @@ function renderDocuments(viewModel) {
   const copy = getLocaleCopy();
   renderNewProductUpload(viewModel);
 
-  if (isNewProductSystem(system.id) && !viewModel.generated) {
-    if (elements.documentLanguageTabs) {
-      elements.documentLanguageTabs.innerHTML = "";
-    }
-    elements.documentPreview.innerHTML = buildNewProductUploadMarkup(viewModel, "preview");
-    elements.documentPackages.innerHTML = buildNewProductUploadMarkup(viewModel, "package");
+  const hideContent = isNewProductSystem(system.id) && !viewModel.generated;
+  if (elements.packageSection) elements.packageSection.hidden = hideContent;
+  if (elements.previewSection) elements.previewSection.hidden = hideContent;
+
+  if (hideContent) {
+    if (elements.documentLanguageTabs) elements.documentLanguageTabs.innerHTML = "";
     return;
   }
 
@@ -949,6 +1014,53 @@ async function uploadNewProductDocument() {
   }
 }
 
+async function uploadNewProductImages() {
+  if (state.selectedImageFiles.length === 0) {
+    state.uploadStatus = { type: "error", message: { ko: "이미지를 선택해 주세요.", ja: "画像を選択してください。", en: "Please select images." }[state.locale] || "이미지를 선택해 주세요." };
+    renderPage();
+    return;
+  }
+
+  state.uploadStatus = { type: "pending", message: { ko: "AI가 분석 중...", ja: "AI分析中...", en: "AI analyzing..." }[state.locale] || "" };
+  renderPage();
+
+  try {
+    const images = await Promise.all(
+      state.selectedImageFiles.map(async (file) => ({
+        name: file.name,
+        mimeType: file.type || "image/png",
+        data: await readFileAsBase64(file)
+      }))
+    );
+
+    const response = await fetch("/api/new-product/upload-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images })
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error ?? { ko: "분석 실패", ja: "分析失敗", en: "Analysis failed" }[state.locale]);
+    }
+
+    state.currentViewModel = {
+      system: getSelectedSystem(),
+      source: payload.source,
+      changeEvent: payload.changeEvent,
+      hubState: payload.hubState,
+      uploadMeta: payload.uploadMeta,
+      generated: true
+    };
+    state.uploadStatus = { type: "success", message: { ko: "매뉴얼이 생성되었습니다!", ja: "マニュアルが生成されました！", en: "Manual generated successfully!" }[state.locale] || "" };
+    state.selectedImageFiles = [];
+    await renderPage();
+  } catch (error) {
+    state.uploadStatus = { type: "error", message: error.message || { ko: "오류가 발생했습니다.", ja: "エラーが発生しました。", en: "An error occurred." }[state.locale] };
+    renderPage();
+  }
+}
+
 function bindEvents() {
   if (elements.systemSelect) {
     elements.systemSelect.addEventListener("change", (e) => {
@@ -977,9 +1089,25 @@ function bindEvents() {
   }
 
   document.addEventListener("click", (e) => {
+    const tabBtn = e.target.closest("[data-upload-tab]");
+    if (tabBtn) {
+      state.uploadMode = tabBtn.dataset.uploadTab;
+      state.uploadStatus = { type: "idle", message: "" };
+      state.selectedUploadFile = null;
+      state.selectedImageFiles = [];
+      renderPage();
+      return;
+    }
+
     const uploadButton = e.target.closest("#newProductUploadButton");
     if (uploadButton) {
       uploadNewProductDocument();
+      return;
+    }
+
+    const imageUploadButton = e.target.closest("#imageUploadButton");
+    if (imageUploadButton) {
+      uploadNewProductImages();
       return;
     }
 
@@ -1007,10 +1135,28 @@ function bindEvents() {
 
   document.addEventListener("change", (e) => {
     const fileInput = e.target.closest("#newProductFileInput");
-    if (!fileInput) return;
-    state.selectedUploadFile = fileInput.files?.[0] ?? null;
-    state.uploadStatus = { type: "idle", message: "" };
-    renderPage();
+    if (fileInput) {
+      state.selectedUploadFile = fileInput.files?.[0] ?? null;
+      state.uploadStatus = { type: "idle", message: "" };
+      renderPage();
+      return;
+    }
+
+    const imageInput = e.target.closest("#imageFileInput");
+    if (imageInput) {
+      const files = Array.from(imageInput.files || []);
+      if (files.length > 10) {
+        const msg = { ko: "최대 10장까지 선택 가능합니다.", ja: "最大10枚まで選択可能です。", en: "You can select up to 10 images." }[state.locale] || "";
+        state.uploadStatus = { type: "error", message: msg };
+        imageInput.value = "";
+        state.selectedImageFiles = [];
+      } else {
+        state.selectedImageFiles = files;
+        state.uploadStatus = { type: "idle", message: "" };
+      }
+      renderPage();
+      return;
+    }
   });
 }
 
