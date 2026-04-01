@@ -1,4 +1,4 @@
-import { createDocumentationHubState, answerQuestion, formatLocalizedSamplesMarkdown } from "./src/core/guidium-pilot.mjs";
+import { createDocumentationHubState, answerQuestion, formatLocalizedSamplesMarkdown } from "./src/core/manual-pilot.mjs";
 import { manualSource } from "./src/data/manual-source.mjs";
 import { changeEvent } from "./src/data/change-event.mjs";
 

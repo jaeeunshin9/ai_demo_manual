@@ -1,6 +1,6 @@
 import { manualSource } from "./src/data/manual-source.mjs";
 import { changeEvent } from "./src/data/change-event.mjs";
-import { createDocumentationHubState, answerQuestion } from "./src/core/guidium-pilot.mjs";
+import { createDocumentationHubState, answerQuestion } from "./src/core/manual-pilot.mjs";
 import { documentationSystems, defaultSystemId, getDocumentationSystem } from "./src/data/system-registry.mjs";
 
 const page = document.body.dataset.page;
@@ -853,6 +853,29 @@ async function renderOperations(viewModel) {
     elements.commitHistory.innerHTML = `<article class="list-card empty"><p>${{ ko: "불러오는 중...", ja: "読み込み中...", en: "Loading..." }[state.locale] ?? "불러오는 중..."}</p></article>`;
     const commitData = await fetchCommitHistory(system.id);
     renderCommitHistory(commitData);
+
+    const latestCommit = commitData?.commits?.[0];
+    if (latestCommit) {
+      elements.latestChange.innerHTML = `
+        <article class="list-card emphasis">
+          <div>
+            <p class="eyebrow">${copy.controls.latest}</p>
+            <h3>${latestCommit.message}</h3>
+          </div>
+        </article>
+        <article class="list-card">
+          <div>
+            <p class="eyebrow">${copy.controls.event}</p>
+            <strong>${latestCommit.sha}</strong>
+          </div>
+          <div class="operation-meta">
+            <span>${formatDate(latestCommit.committedAt)}</span>
+            <span>${latestCommit.author}</span>
+          </div>
+        </article>
+      `;
+    }
+
     if (commitData?.commits?.length) {
       startSyncPolling(system.id);
     }

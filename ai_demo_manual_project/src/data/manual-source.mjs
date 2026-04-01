@@ -22,7 +22,7 @@ export const manualSource = {
       owner: "AI Manual Service Ops"
     }
   },
-  upstreamRepository: "myeongjangai-dummy",
+  upstreamRepository: "jaeeunshin9/ai_manual_docs",
   upstreamSystems: [
     {
       id: "source-repo",
@@ -37,7 +37,7 @@ export const manualSource = {
       id: "faq-pipeline",
       label: "FAQ refresh pipeline",
       kind: "automation",
-      repository: "guidium-faq-refresh",
+      repository: "ai-manual-faq-refresh",
       version: "2026.03",
       status: "synced",
       detail: "FAQ 초안 재생성 파이프라인"
@@ -46,7 +46,7 @@ export const manualSource = {
       id: "search-index",
       label: "Citation search index",
       kind: "search",
-      repository: "guidium-search-index",
+      repository: "ai-manual-search-index",
       version: "ko-ja-en",
       status: "synced",
       detail: "출처 포함 검색용 인덱스"

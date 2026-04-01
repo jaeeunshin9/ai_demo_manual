@@ -2,7 +2,7 @@ import { manualSource } from "./manual-source.mjs";
 import { changeEvent } from "./change-event.mjs";
 import { newProductSource } from "./new-product-source.mjs";
 import { newProductChangeEvent } from "./new-product-change-event.mjs";
-import { createDocumentationHubState } from "../core/guidium-pilot.mjs";
+import { createDocumentationHubState } from "../core/manual-pilot.mjs";
 
 const myeongjangHubPreview = createDocumentationHubState(manualSource, changeEvent, {
   syncedAt: "2026-03-30T09:12:00+09:00"

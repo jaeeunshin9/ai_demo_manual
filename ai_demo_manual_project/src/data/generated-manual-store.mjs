@@ -1,4 +1,4 @@
-import { createDocumentationHubState } from "../core/guidium-pilot.mjs";
+import { createDocumentationHubState } from "../core/manual-pilot.mjs";
 
 const generatedSystems = new Map();
 

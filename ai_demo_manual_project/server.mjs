@@ -4,7 +4,7 @@ import path from "node:path";
 import url from "node:url";
 import { manualSource } from "./src/data/manual-source.mjs";
 import { changeEvent } from "./src/data/change-event.mjs";
-import { answerQuestion, createDocumentationHubState, formatLocalizedSamplesMarkdown, formatManualMarkdown } from "./src/core/guidium-pilot.mjs";
+import { answerQuestion, createDocumentationHubState, formatLocalizedSamplesMarkdown, formatManualMarkdown } from "./src/core/manual-pilot.mjs";
 import { buildGeneratedSystemSnapshot, setGeneratedSystemState } from "./src/data/generated-manual-store.mjs";
 import { parseUploadedDocx } from "./src/import/docx-upload.mjs";
 import { getDocumentationSystem } from "./src/data/system-registry.mjs";
