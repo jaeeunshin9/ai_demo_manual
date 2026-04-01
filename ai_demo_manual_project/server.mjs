@@ -16,7 +16,7 @@ const root = process.cwd();
 const port = process.env.PORT || 4173;
 const host = process.env.HOST || "127.0.0.1";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -691,5 +691,13 @@ ${manualText}`;
 });
 
 server.listen(port, host, () => {
-  console.log(`AI 매뉴얼 서버 실행 중: http://${host}:${port}`);
+  import("node:os").then((os) => {
+    const nets = os.networkInterfaces();
+    const externalIps = Object.values(nets)
+      .flat()
+      .filter((n) => n.family === "IPv4" && !n.internal)
+      .map((n) => n.address);
+    console.log(`AI 매뉴얼 서버 실행 중: http://localhost:${port}`);
+    externalIps.forEach((ip) => console.log(`  외부 접속 주소:       http://${ip}:${port}`));
+  });
 });
