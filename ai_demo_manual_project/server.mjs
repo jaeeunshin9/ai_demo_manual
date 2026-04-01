@@ -67,18 +67,22 @@ function writeJson(res, statusCode, payload) {
 
 function resolveSystemPayload(systemId) {
   const system = getDocumentationSystem(systemId || "myeongjang-ai");
+
+  // 업로드된 상태가 있으면 모든 시스템에 대해 우선 반환
+  const generatedSnapshot = buildGeneratedSystemSnapshot(system.id);
+  if (generatedSnapshot.available) {
+    return {
+      system,
+      source: generatedSnapshot.source,
+      changeEvent: generatedSnapshot.changeEvent,
+      hubState: generatedSnapshot.hubState,
+      uploadMeta: generatedSnapshot.uploadMeta,
+      generated: true
+    };
+  }
+
+  // new-product는 정적 소스가 없으므로 null 반환
   if (system.id === "new-product") {
-    const generated = buildGeneratedSystemSnapshot(system.id);
-    if (generated.available) {
-      return {
-        system,
-        source: generated.source,
-        changeEvent: generated.changeEvent,
-        hubState: generated.hubState,
-        uploadMeta: generated.uploadMeta,
-        generated: true
-      };
-    }
     return {
       system,
       source: null,
@@ -89,6 +93,7 @@ function resolveSystemPayload(systemId) {
     };
   }
 
+  // 그 외 시스템은 정적 소스로 fallback
   const source = system.source ?? manualSource;
   const event = system.changeEvent ?? changeEvent;
   const hubState = createDocumentationHubState(source, event, {
@@ -218,18 +223,61 @@ function buildManualFallbackResponse(hubState, messages, locale) {
   return fallback.answer;
 }
 
+async function fetchGitHubCommits(githubRepo) {
+  const apiUrl = `https://api.github.com/repos/${githubRepo}/commits?per_page=3`;
+  const headers = {
+    "Accept": "application/vnd.github+json",
+    "User-Agent": "ai-manual-server"
+  };
+  if (process.env.GITHUB_TOKEN) {
+    headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+  const res = await fetch(apiUrl, { headers });
+  if (!res.ok) {
+    throw new Error(`GitHub API 오류: ${res.status} ${res.statusText}`);
+  }
+  const data = await res.json();
+  return data.map((item) => ({
+    sha: item.sha.slice(0, 7),
+    message: item.commit.message.split("\n")[0],
+    author: item.commit.author.name,
+    committedAt: item.commit.author.date,
+    url: item.html_url
+  }));
+}
+
 const server = http.createServer(async (req, res) => {
   try {
   const parsed = url.parse(req.url ?? "/");
   let pathname = decodeURIComponent(parsed.pathname || "/");
   pathname = pathname === "/" ? "/index.html" : pathname;
 
-  if (pathname === "/api/new-product/state" && req.method === "GET") {
-    writeJson(res, 200, buildGeneratedSystemSnapshot("new-product"));
+  if (pathname === "/api/commits" && req.method === "GET") {
+    const qs = new URL(req.url ?? "/", `http://${host}:${port}`).searchParams;
+    const systemId = qs.get("system") ?? "myeongjang-ai";
+    const system = getDocumentationSystem(systemId);
+    const githubRepo = system.githubRepo ?? "jaeeunshin9/ai_manual_docs";
+    try {
+      const commits = await fetchGitHubCommits(githubRepo);
+      writeJson(res, 200, { systemId, githubRepo, commits });
+    } catch (err) {
+      console.error("GitHub API 오류:", err.message);
+      writeJson(res, 502, { error: `GitHub 커밋 조회 실패: ${err.message}` });
+    }
     return;
   }
 
-  if (pathname === "/api/new-product/upload" && req.method === "POST") {
+  const validUploadSystems = ["new-product", "myeongjang-ai"];
+
+  const stateRouteMatch = pathname.match(/^\/api\/([^\/]+)\/state$/);
+  if (stateRouteMatch && validUploadSystems.includes(stateRouteMatch[1]) && req.method === "GET") {
+    writeJson(res, 200, buildGeneratedSystemSnapshot(stateRouteMatch[1]));
+    return;
+  }
+
+  const wordUploadMatch = pathname.match(/^\/api\/([^\/]+)\/upload$/);
+  if (wordUploadMatch && validUploadSystems.includes(wordUploadMatch[1]) && req.method === "POST") {
+    const routeSystemId = wordUploadMatch[1];
     const body = await readBody(req);
     const { fileName, fileContentBase64, fileSize } = JSON.parse(body);
 
@@ -252,12 +300,14 @@ const server = http.createServer(async (req, res) => {
       fileSize: fileSize ?? buffer.byteLength
     });
 
-    setGeneratedSystemState("new-product", generated);
-    writeJson(res, 200, buildGeneratedSystemSnapshot("new-product"));
+    setGeneratedSystemState(routeSystemId, generated);
+    writeJson(res, 200, buildGeneratedSystemSnapshot(routeSystemId));
     return;
   }
 
-  if (pathname === "/api/new-product/upload-images" && req.method === "POST") {
+  const imageUploadMatch = pathname.match(/^\/api\/([^\/]+)\/upload-images$/);
+  if (imageUploadMatch && validUploadSystems.includes(imageUploadMatch[1]) && req.method === "POST") {
+    const routeSystemId = imageUploadMatch[1];
     const body = await readBody(req);
     const { images } = JSON.parse(body);
 
@@ -426,8 +476,11 @@ const server = http.createServer(async (req, res) => {
       const productName = generated.productName || "신규 프로덕트";
       const documentTitle = generated.documentTitle || "신규 프로덕트 사용자 매뉴얼";
 
+      const baseSource = routeSystemId === "myeongjang-ai" ? manualSource : newProductSource;
+      const baseChangeEvent = routeSystemId === "myeongjang-ai" ? changeEvent : newProductChangeEvent;
+
       const source = {
-        ...newProductSource,
+        ...baseSource,
         productName,
         documentName: documentTitle,
         version: `screenshot-${uploadedAt.slice(0, 10)}`,
@@ -436,8 +489,8 @@ const server = http.createServer(async (req, res) => {
         sections,
         faqSeeds,
         localizedMeta: {
-          ...newProductSource.localizedMeta,
-          ko: { ...newProductSource.localizedMeta.ko, productName, documentName: documentTitle }
+          ...baseSource.localizedMeta,
+          ko: { ...baseSource.localizedMeta.ko, productName, documentName: documentTitle }
         }
       };
 
@@ -453,14 +506,14 @@ const server = http.createServer(async (req, res) => {
       };
 
       const imageChangeEvent = {
-        ...newProductChangeEvent,
+        ...baseChangeEvent,
         eventId: `CE-SCREENSHOT-${Date.now()}`,
         title: "스크린샷 기반 매뉴얼 생성",
         summary: `${images.length}장의 스크린샷을 분석하여 매뉴얼을 자동 생성했습니다.`
       };
 
-      setGeneratedSystemState("new-product", { source, changeEvent: imageChangeEvent, uploadMeta });
-      writeJson(res, 200, buildGeneratedSystemSnapshot("new-product"));
+      setGeneratedSystemState(routeSystemId, { source, changeEvent: imageChangeEvent, uploadMeta });
+      writeJson(res, 200, buildGeneratedSystemSnapshot(routeSystemId));
     } catch (err) {
       console.error("이미지 업로드 처리 오류:", err);
       writeJson(res, 500, { error: err.message || "이미지 분석 중 오류가 발생했습니다." });

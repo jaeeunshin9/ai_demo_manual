@@ -163,7 +163,10 @@ const state = {
   selectedUploadFile: null,
   selectedImageFiles: [],
   uploadMode: "word",
-  uploadStatus: { type: "idle", message: "" }
+  uploadStatus: { type: "idle", message: "" },
+  lastSeenCommitSha: localStorage.getItem("ai-manual:last-commit-sha") || null,
+  lastCheckedAt: null,
+  syncIntervalId: null
 };
 
 state.documentLanguage = state.locale;
@@ -192,11 +195,19 @@ const elements = {
   latestChange: document.querySelector("#latestChange"),
   chatLog: document.querySelector("#chatLog"),
   chatForm: document.querySelector("#chatForm"),
-  chatInput: document.querySelector("#chatInput")
+  chatInput: document.querySelector("#chatInput"),
+  commitHistory: document.querySelector("#commitHistory"),
+  commitRepoLabel: document.querySelector("#commitRepoLabel"),
+  syncBadge: document.querySelector("#syncBadge"),
+  commitNotificationBanner: document.querySelector("#commitNotificationBanner")
 };
 
 function isNewProductSystem(systemId = state.systemId) {
   return systemId === "new-product";
+}
+
+function isUploadableSystem(systemId = state.systemId) {
+  return ["new-product", "myeongjang-ai"].includes(systemId);
 }
 
 function getIntlLocale(locale = state.locale) {
@@ -321,37 +332,42 @@ function buildStaticViewModel(system) {
 
 async function loadSystemViewModel() {
   const system = getSelectedSystem();
-  if (!isNewProductSystem(system.id)) {
-    return buildStaticViewModel(system);
-  }
 
-  try {
-    const response = await fetch("/api/new-product/state", { cache: "no-store" });
-    if (response.ok) {
-      const payload = await response.json();
-      if (payload.available) {
-        return {
-          system,
-          source: payload.source,
-          changeEvent: payload.changeEvent,
-          hubState: payload.hubState,
-          uploadMeta: payload.uploadMeta,
-          generated: true
-        };
+  // 업로드 가능한 시스템은 서버에서 생성된 상태를 먼저 확인
+  if (isUploadableSystem(system.id)) {
+    try {
+      const response = await fetch(`/api/${system.id}/state`, { cache: "no-store" });
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload.available) {
+          return {
+            system,
+            source: payload.source,
+            changeEvent: payload.changeEvent,
+            hubState: payload.hubState,
+            uploadMeta: payload.uploadMeta,
+            generated: true
+          };
+        }
       }
+    } catch {
+      // 에러 시 fallback
     }
-  } catch {
-    return buildStaticViewModel(system);
+
+    // new-product는 정적 소스 없음, myeongjang-ai는 정적 소스로 fallback
+    if (isNewProductSystem(system.id)) {
+      return {
+        ...buildStaticViewModel(system),
+        hubState: {
+          ...buildStaticViewModel(system).hubState,
+          manual: null,
+          searchIndex: []
+        }
+      };
+    }
   }
 
-  return {
-    ...buildStaticViewModel(system),
-    hubState: {
-      ...buildStaticViewModel(system).hubState,
-      manual: null,
-      searchIndex: []
-    }
-  };
+  return buildStaticViewModel(system);
 }
 
 // ── 인메모리 매뉴얼 → HTML (신뢰 소스, XSS 안전) ──
@@ -483,7 +499,7 @@ function getUploadStatusMessage(viewModel, copy = getLocaleCopy()) {
 function renderNewProductUpload(viewModel) {
   if (!elements.newProductUploadSection) return;
 
-  const showUploadBar = page === "documents" && isNewProductSystem(viewModel.system.id);
+  const showUploadBar = page === "documents" && isUploadableSystem(viewModel.system.id);
   elements.newProductUploadSection.hidden = !showUploadBar;
   if (!showUploadBar) return;
 
@@ -693,7 +709,61 @@ function renderDocuments(viewModel) {
   elements.documentPreview.appendChild(viewer);
 }
 
-function renderOperations(viewModel) {
+async function fetchCommitHistory(systemId) {
+  try {
+    const res = await fetch(`/api/commits?system=${encodeURIComponent(systemId)}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function renderCommitHistory(data) {
+  if (!elements.commitHistory) return;
+  const labels = {
+    ko: { empty: "커밋 이력이 없습니다.", by: "작성자" },
+    ja: { empty: "コミット履歴がありません。", by: "作成者" },
+    en: { empty: "No commit history.", by: "by" }
+  }[state.locale] ?? { empty: "커밋 이력이 없습니다.", by: "작성자" };
+
+  if (!data) {
+    elements.commitHistory.innerHTML = `<article class="list-card empty"><p>${labels.empty}</p></article>`;
+    if (elements.commitRepoLabel) elements.commitRepoLabel.textContent = "";
+    return;
+  }
+
+  if (elements.commitRepoLabel) {
+    elements.commitRepoLabel.innerHTML = `<a class="repo-link" href="https://github.com/${data.githubRepo}" target="_blank" rel="noopener">⎇ ${data.githubRepo}</a>`;
+  }
+
+  elements.commitHistory.innerHTML = (data.commits ?? []).map((commit) => {
+    const date = commit.committedAt
+      ? new Intl.DateTimeFormat(
+          state.locale === "ja" ? "ja-JP" : state.locale === "en" ? "en-US" : "ko-KR",
+          { dateStyle: "medium", timeStyle: "short" }
+        ).format(new Date(commit.committedAt))
+      : "-";
+    const colonIdx = commit.message.indexOf(":");
+    const hasType = colonIdx > 0 && colonIdx < 10;
+    const typeLabel = hasType ? commit.message.slice(0, colonIdx).trim() : "";
+    const msgBody = hasType ? commit.message.slice(colonIdx + 1).trim() : commit.message;
+    return `
+      <article class="commit-card">
+        <div class="commit-main">
+          ${typeLabel ? `<span class="commit-type commit-type--${typeLabel}">${typeLabel}</span>` : ""}
+          <span class="commit-message">${msgBody}</span>
+        </div>
+        <div class="commit-meta">
+          <span class="commit-hash">${commit.sha}</span>
+          <span>${labels.by}: ${commit.author}</span>
+          <span>${date}</span>
+        </div>
+      </article>`;
+  }).join("");
+}
+
+async function renderOperations(viewModel) {
   if (!elements.operationsSummary || !elements.pipelineGrid || !elements.latestChange) return;
 
   const { system, source, hubState, changeEvent, uploadMeta } = viewModel;
@@ -703,7 +773,7 @@ function renderOperations(viewModel) {
   const otherSystems = documentationSystems.filter((s) => s.id !== system.id);
   const pendingSystems = otherSystems.map((s) => getSystemDisplayName(s)).join(", ");
 
-  const uploadCards = isNewProductSystem(system.id)
+  const uploadCards = isUploadableSystem(system.id)
     ? (uploadMeta
         ? `
           <article class="stat-card highlight">
@@ -778,6 +848,86 @@ function renderOperations(viewModel) {
       </div>
     </article>
   `;
+
+  if (elements.commitHistory) {
+    elements.commitHistory.innerHTML = `<article class="list-card empty"><p>${{ ko: "불러오는 중...", ja: "読み込み中...", en: "Loading..." }[state.locale] ?? "불러오는 중..."}</p></article>`;
+    const commitData = await fetchCommitHistory(system.id);
+    renderCommitHistory(commitData);
+    if (commitData?.commits?.length) {
+      startSyncPolling(system.id);
+    }
+  }
+}
+
+function formatTimeAgo(date) {
+  if (!date) return "-";
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  const t = {
+    ko: { just: "방금 전", min: (n) => `${n}분 전`, hour: (n) => `${n}시간 전` },
+    ja: { just: "たった今", min: (n) => `${n}分前`, hour: (n) => `${n}時間前` },
+    en: { just: "just now", min: (n) => `${n}m ago`, hour: (n) => `${n}h ago` }
+  }[state.locale] ?? { just: "방금 전", min: (n) => `${n}분 전`, hour: (n) => `${n}시간 전` };
+  if (seconds < 60) return t.just;
+  if (seconds < 3600) return t.min(Math.floor(seconds / 60));
+  return t.hour(Math.floor(seconds / 3600));
+}
+
+function renderSyncBadge() {
+  const badge = document.querySelector("#syncBadge");
+  if (!badge) return;
+  const label = { ko: "GitHub 자동 동기화 중", ja: "GitHub 自動同期中", en: "Auto-syncing with GitHub" }[state.locale] ?? "GitHub 자동 동기화 중";
+  const checkedLabel = { ko: "마지막 확인", ja: "最終確認", en: "Last checked" }[state.locale] ?? "마지막 확인";
+  badge.innerHTML = `<span class="sync-dot"></span><span class="sync-label">${label}</span><span class="sync-time">${checkedLabel}: ${formatTimeAgo(state.lastCheckedAt)}</span>`;
+}
+
+function showCommitNotificationBanner(commit) {
+  const banner = document.querySelector("#commitNotificationBanner");
+  if (!banner) return;
+  const msg = { ko: "새 커밋이 감지되었습니다", ja: "新しいコミットが検出されました", en: "New commit detected" }[state.locale] ?? "새 커밋이 감지되었습니다";
+  const subMsg = { ko: "매뉴얼 연동 데이터가 업데이트되었습니다.", ja: "マニュアル連携データが更新されました。", en: "Manual sync data has been updated." }[state.locale] ?? "매뉴얼 연동 데이터가 업데이트되었습니다.";
+  const closeLabel = { ko: "닫기", ja: "閉じる", en: "Dismiss" }[state.locale] ?? "닫기";
+  banner.hidden = false;
+  banner.innerHTML = `
+    <div class="commit-banner-inner">
+      <span class="commit-banner-icon">🔔</span>
+      <div class="commit-banner-body">
+        <strong>${msg} &mdash; <em>${commit.message}</em></strong>
+        <span>${subMsg}</span>
+      </div>
+      <button class="commit-banner-close" type="button">${closeLabel}</button>
+    </div>`;
+  banner.querySelector(".commit-banner-close").addEventListener("click", () => { banner.hidden = true; });
+  setTimeout(() => { banner.hidden = true; }, 10000);
+}
+
+async function checkNewCommit(systemId) {
+  try {
+    const data = await fetchCommitHistory(systemId);
+    state.lastCheckedAt = new Date();
+    renderSyncBadge();
+    if (data?.commits?.length) {
+      const latestSha = data.commits[0].sha;
+      if (state.lastSeenCommitSha && latestSha !== state.lastSeenCommitSha) {
+        // 새 커밋 감지 → 배너 + 커밋 목록 갱신
+        showCommitNotificationBanner(data.commits[0]);
+        const commitEl = document.querySelector("#commitHistory");
+        if (commitEl) renderCommitHistory(data);
+      }
+      // SHA 갱신 (초기값 null 포함)
+      state.lastSeenCommitSha = latestSha;
+      localStorage.setItem("ai-manual:last-commit-sha", latestSha);
+    }
+  } catch { /* 네트워크 오류 무시 */ }
+}
+
+function startSyncPolling(systemId) {
+  if (state.syncIntervalId) clearInterval(state.syncIntervalId);
+  state.lastCheckedAt = new Date();
+  renderSyncBadge();
+  // 페이지 로드 직후 즉시 한 번 체크
+  checkNewCommit(systemId);
+  // 이후 15초마다 반복 체크
+  state.syncIntervalId = setInterval(() => checkNewCommit(systemId), 15000);
 }
 
 // ── 출처 카드 렌더링 ────────────────────────────────
@@ -983,7 +1133,7 @@ async function uploadNewProductDocument() {
 
   try {
     const fileContentBase64 = await readFileAsBase64(state.selectedUploadFile);
-    const response = await fetch("/api/new-product/upload", {
+    const response = await fetch(`/api/${state.systemId}/upload`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1033,7 +1183,7 @@ async function uploadNewProductImages() {
       }))
     );
 
-    const response = await fetch("/api/new-product/upload-images", {
+    const response = await fetch(`/api/${state.systemId}/upload-images`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images })
@@ -1066,6 +1216,7 @@ function bindEvents() {
     elements.systemSelect.addEventListener("change", (e) => {
       state.systemId = e.target.value;
       localStorage.setItem(storageKeys.system, state.systemId);
+      state.currentViewModel = null;
       renderPage();
     });
   }
@@ -1169,16 +1320,19 @@ function markActiveNav() {
 
 async function renderPage() {
   state.documentLanguage = state.locale;
-  state.currentViewModel = await loadSystemViewModel();
+  state.currentViewModel = state.currentViewModel ?? await loadSystemViewModel();
   renderSystemSelectors();
   setStaticCopy();
   markActiveNav();
 
   renderSidebarStatus(state.currentViewModel);
 
-  if (page === "overview") renderOverview(state.currentViewModel.hubState);
+  if (page === "overview") {
+    renderOverview(state.currentViewModel.hubState);
+    startSyncPolling(state.systemId);
+  }
   if (page === "documents") { renderDocumentTabs(); renderDocuments(state.currentViewModel); }
-  if (page === "operations") renderOperations(state.currentViewModel);
+  if (page === "operations") await renderOperations(state.currentViewModel);
   if (page === "search") renderSearchInitial();
 }
 

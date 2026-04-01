@@ -27,6 +27,7 @@ export const documentationSystems = [
       "현재 운영 중인 제조 문서 시스템입니다. 자동 동기화, 최신 변경 반영, 검색 근거 제시까지 전체 허브 흐름을 검증하는 기준 시스템입니다.",
     owner: manualSource.owner,
     repository: manualSource.upstreamRepository,
+    githubRepo: "jaeeunshin9/ai_manual_docs",
     source: manualSource,
     changeEvent,
     hubPreview: {
@@ -49,6 +50,7 @@ export const documentationSystems = [
       "신규 프로덕트 문서 시스템입니다. 온보딩 준비 중이며 상세 문서 내용은 추후 업데이트 예정입니다.",
     owner: "AI 매뉴얼 Service Ops",
     repository: "new-product-docs",
+    githubRepo: "jaeeunshin9/ai_manual_docs",
     source: newProductSource,
     changeEvent: newProductChangeEvent,
     hubPreview: {
