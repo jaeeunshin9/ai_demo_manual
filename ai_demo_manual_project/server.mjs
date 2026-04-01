@@ -582,6 +582,18 @@ ${manualText}`;
       }
 
       if (!geminiResponse.ok) {
+        const errStatus = geminiResponse.status;
+        const errMsg = payload?.error?.message ?? `Gemini API 오류 (${errStatus})`;
+        console.error(`[chat] Gemini 오류 ${errStatus}:`, errMsg);
+        if (errStatus === 429) {
+          const quotaMsg = {
+            ko: "⚠️ AI 응답 한도(할당량)가 초과됐습니다. 잠시 후 다시 시도해 주세요.",
+            ja: "⚠️ AI の応答制限（クォータ）を超えました。しばらくしてからもう一度お試しください。",
+            en: "⚠️ AI response quota exceeded. Please wait a moment and try again."
+          }[responseLocale] ?? "⚠️ AI 응답 한도가 초과됐습니다. 잠시 후 다시 시도해 주세요.";
+          streamTextResponse(res, quotaMsg);
+          return;
+        }
         const fallbackText = buildManualFallbackResponse(hubState, messages, responseLocale);
         streamTextResponse(res, fallbackText);
         return;
@@ -589,6 +601,7 @@ ${manualText}`;
 
       const responseText = extractGeminiText(payload).trim();
       if (!responseText) {
+        console.warn("[chat] Gemini 응답이 비어있습니다.");
         const fallbackText = buildManualFallbackResponse(hubState, messages, responseLocale);
         streamTextResponse(res, fallbackText);
         return;
@@ -596,6 +609,7 @@ ${manualText}`;
 
       streamTextResponse(res, responseText);
     } catch (err) {
+      console.error("[chat] 예외 발생:", err.message);
       if (!res.headersSent) {
         const fallbackText = buildManualFallbackResponse(hubState, messages, responseLocale);
         streamTextResponse(res, fallbackText);
