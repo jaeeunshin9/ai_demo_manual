@@ -923,6 +923,49 @@ function showCommitNotificationBanner(commit) {
   setTimeout(() => { banner.hidden = true; }, 10000);
 }
 
+function showCommitPopup(commit) {
+  document.querySelector(".commit-popup-overlay")?.remove();
+
+  const date = commit.committedAt
+    ? new Intl.DateTimeFormat(
+        state.locale === "ja" ? "ja-JP" : state.locale === "en" ? "en-US" : "ko-KR",
+        { dateStyle: "medium", timeStyle: "short" }
+      ).format(new Date(commit.committedAt))
+    : "-";
+
+  const labels = {
+    ko: { title: "🔔 새 커밋이 감지되었습니다", question: "매뉴얼을 수정하시겠습니까?", yes: "예", no: "아니오" },
+    ja: { title: "🔔 新しいコミットを検出しました", question: "マニュアルを更新しますか？", yes: "はい", no: "いいえ" },
+    en: { title: "🔔 New commit detected", question: "Would you like to update the manual?", yes: "Yes", no: "No" },
+  }[state.locale] ?? { title: "🔔 새 커밋이 감지되었습니다", question: "매뉴얼을 수정하시겠습니까?", yes: "예", no: "아니오" };
+
+  const overlay = document.createElement("div");
+  overlay.className = "commit-popup-overlay";
+  overlay.innerHTML = `
+    <div class="commit-popup">
+      <p class="commit-popup-title">${labels.title}</p>
+      <p class="commit-popup-message">${commit.message}</p>
+      <p class="commit-popup-time">${date}</p>
+      <p class="commit-popup-question">${labels.question}</p>
+      <div class="commit-popup-actions">
+        <button class="commit-popup-no" type="button">${labels.no}</button>
+        <button class="commit-popup-yes" type="button">${labels.yes}</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector(".commit-popup-no").addEventListener("click", () => {
+    overlay.remove();
+  });
+
+  overlay.querySelector(".commit-popup-yes").addEventListener("click", async () => {
+    overlay.remove();
+    state.currentViewModel = null;
+    await renderPage();
+  });
+}
+
 async function checkNewCommit(systemId) {
   try {
     const data = await fetchCommitHistory(systemId);
@@ -931,8 +974,8 @@ async function checkNewCommit(systemId) {
     if (data?.commits?.length) {
       const latestSha = data.commits[0].sha;
       if (state.lastSeenCommitSha && latestSha !== state.lastSeenCommitSha) {
-        // 새 커밋 감지 → 배너 + 커밋 목록 갱신
-        showCommitNotificationBanner(data.commits[0]);
+        // 새 커밋 감지 → 팝업 + 커밋 목록 갱신
+        showCommitPopup(data.commits[0]);
         const commitEl = document.querySelector("#commitHistory");
         if (commitEl) renderCommitHistory(data);
       }
@@ -1354,7 +1397,7 @@ async function renderPage() {
     renderOverview(state.currentViewModel.hubState);
     startSyncPolling(state.systemId);
   }
-  if (page === "documents") { renderDocumentTabs(); renderDocuments(state.currentViewModel); }
+  if (page === "documents") { renderDocumentTabs(); renderDocuments(state.currentViewModel); startSyncPolling(state.systemId); }
   if (page === "operations") await renderOperations(state.currentViewModel);
   if (page === "search") renderSearchInitial();
 }

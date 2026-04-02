@@ -1090,3 +1090,95 @@ button.blue {
   background: var(--blue);
   color: #fff;
 }
+
+/* ── Commit Popup Modal ────────────────────────────────────────── */
+.commit-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.commit-popup {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 460px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.commit-popup-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.commit-popup-message {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--blue);
+  word-break: break-all;
+  margin: 0;
+  background: var(--blue-soft);
+  border: 1px solid var(--blue-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.commit-popup-time {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.commit-popup-question {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.commit-popup-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.commit-popup-no {
+  background: none;
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 22px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.commit-popup-no:hover {
+  background: var(--bg);
+}
+
+.commit-popup-yes {
+  background: var(--blue);
+  border: 1px solid var(--blue);
+  color: #fff;
+  border-radius: 999px;
+  padding: 9px 22px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.commit-popup-yes:hover {
+  opacity: 0.85;
+}
