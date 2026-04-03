@@ -267,6 +267,100 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (pathname === "/api/commit-diff" && req.method === "GET") {
+    const qs = new URL(req.url ?? "/", `http://${host}:${port}`).searchParams;
+    const sha = qs.get("sha");
+    const systemId = qs.get("system") ?? "myeongjang-ai";
+
+    if (!sha) {
+      writeJson(res, 400, { error: "sha is required" });
+      return;
+    }
+
+    const system = getDocumentationSystem(systemId);
+    const githubRepo = system.githubRepo ?? "jaeeunshin9/ai_manual_docs";
+    const resolved = resolveSystemPayload(systemId);
+    const sectionIds = (resolved.source?.sections ?? []).map((s) => s.id);
+
+    try {
+      const ghHeaders = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "ai-manual-server"
+      };
+      if (process.env.GITHUB_TOKEN) {
+        ghHeaders["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
+      }
+
+      const commitRes = await fetch(`https://api.github.com/repos/${githubRepo}/commits/${sha}`, { headers: ghHeaders });
+      if (!commitRes.ok) throw new Error(`GitHub API 오류: ${commitRes.status}`);
+      const commitData = await commitRes.json();
+
+      // 모든 변경 파일의 patch 수집 (파일 종류 무관)
+      const commitMessage = commitData.commit?.message ?? "";
+      const patchText = (commitData.files ?? [])
+        .map((f) => `[${f.filename}]\n${f.patch ?? ""}`)
+        .join("\n\n");
+      const fullContext = `커밋 메시지: ${commitMessage}\n\n${patchText}`.slice(0, 5000);
+
+      if (!fullContext.trim()) {
+        writeJson(res, 200, { changedSectionIds: [] });
+        return;
+      }
+
+      if (!GEMINI_API_KEY) {
+        writeJson(res, 200, { changedSectionIds: [] });
+        return;
+      }
+
+      const sectionDescriptions = (resolved.source?.sections ?? [])
+        .map((s) => `"${s.id}": ${s.sectionTitle} — ${s.subsectionTitle}`)
+        .join("\n");
+
+      const diffPrompt = `아래는 GitHub 커밋 내용입니다. 이 변경사항이 매뉴얼의 어느 섹션과 관련이 있는지 분석하세요.
+
+매뉴얼 섹션 목록:
+${sectionDescriptions}
+
+커밋 내용:
+${fullContext}
+
+위 커밋이 영향을 주는 섹션의 id만 JSON 배열로 반환하세요.
+예시: ["operations", "search"]
+관련 섹션이 없으면 []를 반환하세요.
+반드시 JSON 배열만 반환하고 다른 텍스트는 포함하지 마세요.`;
+
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: diffPrompt }] }],
+            generationConfig: { temperature: 0, responseMimeType: "application/json" }
+          })
+        }
+      );
+
+      const geminiData = await geminiRes.json();
+      const rawText = extractGeminiText(geminiData).trim();
+
+      let changedSectionIds = [];
+      try {
+        const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+        const parsed = JSON.parse(cleaned);
+        changedSectionIds = Array.isArray(parsed) ? parsed.filter((id) => sectionIds.includes(id)) : [];
+      } catch {
+        changedSectionIds = [];
+      }
+
+      writeJson(res, 200, { changedSectionIds });
+    } catch (err) {
+      console.error("commit-diff 오류:", err.message);
+      writeJson(res, 502, { error: err.message });
+    }
+    return;
+  }
+
   const validUploadSystems = ["new-product", "myeongjang-ai"];
 
   const stateRouteMatch = pathname.match(/^\/api\/([^\/]+)\/state$/);

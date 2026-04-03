@@ -498,6 +498,30 @@ button.blue {
   background: var(--surface-muted);
 }
 
+@keyframes section-flash {
+  0%   { background: rgba(229, 62, 62, 0.18); }
+  100% { background: rgba(229, 62, 62, 0.06); }
+}
+
+.section-changed {
+  border-left: 3px solid #e53e3e;
+  background: rgba(229, 62, 62, 0.06);
+  border-radius: 0 6px 6px 0;
+  padding-left: 12px;
+  margin-left: -15px;
+  cursor: pointer;
+  animation: section-flash 1.2s ease-out forwards;
+  transition: background 0.2s;
+}
+
+.section-changed:hover {
+  background: rgba(229, 62, 62, 0.13);
+}
+
+.section-changed h2 {
+  color: #c53030 !important;
+}
+
 .preview-section + .preview-section {
   margin-top: 18px;
   padding-top: 18px;

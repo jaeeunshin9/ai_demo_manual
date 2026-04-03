@@ -1,6 +1,6 @@
 import { manualSource } from "./src/data/manual-source.mjs";
 import { changeEvent } from "./src/data/change-event.mjs";
-import { createDocumentationHubState, answerQuestion } from "./src/core/manual-pilot.mjs";
+import { createDocumentationHubState, answerQuestion, generateInitialManual } from "./src/core/manual-pilot.mjs";
 import { documentationSystems, defaultSystemId, getDocumentationSystem } from "./src/data/system-registry.mjs";
 
 const page = document.body.dataset.page;
@@ -160,6 +160,7 @@ const state = {
   documentLanguage: localStorage.getItem(storageKeys.documentLanguage) || "ko",
   chatHistory: [],
   currentViewModel: null,
+  pendingHighlightManual: null,
   selectedUploadFile: null,
   selectedImageFiles: [],
   uploadMode: "word",
@@ -387,8 +388,9 @@ function buildDocHtml(manual, language, source) {
 
   if (language === "ko") {
     html += `<p>${esc(manual.summary)}</p><hr>`;
-    for (const s of manual.sections) {
-      html += `<h2>${esc(s.section)}</h2><h3>${esc(s.subsection)}</h3><p>${esc(s.content)}</p>`;
+    for (let i = 0; i < manual.sections.length; i++) {
+      const s = manual.sections[i];
+      html += `<div data-section-idx="${i}" data-section-id="${esc(s.sectionId)}"><h2>${esc(s.section)}</h2><h3>${esc(s.subsection)}</h3><p>${esc(s.content)}</p></div>`;
     }
     html += `<h2>FAQ</h2>`;
     for (const item of manual.faqDraft) {
@@ -666,6 +668,40 @@ function renderDocumentTabs() {
     `).join("");
 }
 
+function highlightChangedSections(viewer, oldManual, newManual) {
+  if (!oldManual || !newManual) return;
+
+  const dismissHint = {
+    ko: "변경된 항목입니다. 클릭하면 강조가 해제됩니다.",
+    ja: "変更された項目です。クリックで強調を解除します。",
+    en: "This item was changed. Click to dismiss."
+  }[state.locale] ?? "변경된 항목입니다. 클릭하면 강조가 해제됩니다.";
+
+  function markChanged(el) {
+    el.classList.add("section-changed");
+    el.title = dismissHint;
+    el.addEventListener("click", () => {
+      el.classList.remove("section-changed");
+      el.removeAttribute("title");
+    }, { once: true });
+  }
+
+  const oldSections = oldManual.sections ?? [];
+  const newSections = newManual.sections ?? [];
+  for (let i = 0; i < newSections.length; i++) {
+    const isNew = i >= oldSections.length;
+    const isChanged = !isNew && (
+      oldSections[i].content !== newSections[i].content ||
+      oldSections[i].section !== newSections[i].section ||
+      oldSections[i].subsection !== newSections[i].subsection
+    );
+    if (isNew || isChanged) {
+      const el = viewer.querySelector(`[data-section-idx="${i}"]`);
+      if (el) markChanged(el);
+    }
+  }
+}
+
 function renderDocuments(viewModel) {
   if (!elements.documentPackages || !elements.documentPreview) return;
 
@@ -707,6 +743,11 @@ function renderDocuments(viewModel) {
   viewer.innerHTML = buildDocHtml(hubState.manual, state.locale, source);
   elements.documentPreview.innerHTML = "";
   elements.documentPreview.appendChild(viewer);
+
+  if (state.pendingHighlightManual) {
+    highlightChangedSections(viewer, state.pendingHighlightManual, hubState.manual);
+    state.pendingHighlightManual = null;
+  }
 }
 
 async function fetchCommitHistory(systemId) {
@@ -961,8 +1002,17 @@ function showCommitPopup(commit) {
 
   overlay.querySelector(".commit-popup-yes").addEventListener("click", async () => {
     overlay.remove();
-    state.currentViewModel = null;
-    await renderPage();
+    if (page !== "documents") {
+      // 다른 페이지에서 Yes 누른 경우 플래그 저장 후 매뉴얼 페이지로 이동
+      sessionStorage.setItem("ai-manual:pending-highlight", "1");
+      window.location.href = "/documents.html";
+    } else {
+      state.pendingHighlightManual = state.currentViewModel?.source
+        ? generateInitialManual(state.currentViewModel.source).manual
+        : null;
+      state.currentViewModel = null;
+      await renderPage();
+    }
   });
 }
 
@@ -1397,7 +1447,17 @@ async function renderPage() {
     renderOverview(state.currentViewModel.hubState);
     startSyncPolling(state.systemId);
   }
-  if (page === "documents") { renderDocumentTabs(); renderDocuments(state.currentViewModel); startSyncPolling(state.systemId); }
+  if (page === "documents") {
+    if (sessionStorage.getItem("ai-manual:pending-highlight")) {
+      sessionStorage.removeItem("ai-manual:pending-highlight");
+      state.pendingHighlightManual = state.currentViewModel?.source
+        ? generateInitialManual(state.currentViewModel.source).manual
+        : null;
+    }
+    renderDocumentTabs();
+    renderDocuments(state.currentViewModel);
+    startSyncPolling(state.systemId);
+  }
   if (page === "operations") await renderOperations(state.currentViewModel);
   if (page === "search") renderSearchInitial();
 }
